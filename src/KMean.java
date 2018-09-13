@@ -32,10 +32,8 @@ public class KMean {
 			clusterInput.add(new LocationWrapper(location));
 
 		// initialize a new clustering algorithm.
-		// we use KMeans++ with 10 clusters and 10000 iterations maximum.
-		// we did not specify a distance measure; the default (euclidean distance) is
-		// used.
-		KMeansPlusPlusClusterer<LocationWrapper> clusterer = new KMeansPlusPlusClusterer<LocationWrapper>(4, 10000);
+		// we use KMeans++ with 3 clusters and 10000 iterations maximum.
+		KMeansPlusPlusClusterer<LocationWrapper> clusterer = new KMeansPlusPlusClusterer<LocationWrapper>(3, 10000);
 		List<CentroidCluster<LocationWrapper>> clusterResults = clusterer.cluster(clusterInput);
 
 		// output the clusters
@@ -47,43 +45,39 @@ public class KMean {
 			int j = 0;
 
 			for (LocationWrapper locationWrapper : clusterResults.get(i).getPoints()) {
-				System.out.println(locationWrapper.getLocation() + ":" + locationWrapper.getLocation().getX()
-						+ locationWrapper.getLocation().getY());
 				data[j][0] = locationWrapper.getLocation().getX();
 				data[j][1] = locationWrapper.getLocation().getY();
 				j++;
 			}
 
 			regression.addData(data);
-			System.out.println();
-			System.out.println(regression.getIntercept());
-			// displays intercept of regression line
-
-			System.out.println(regression.getSlope());
-			// displays slope of regression line
-
-			System.out.println(regression.getSlopeStdErr());
-			// displays slope standard error
 
 			for (LocationWrapper locationWrapper : clusterResults.get(i).getPoints()) {
 
 				double y_pre = regression.getSlope() * locationWrapper.getLocation().getX() + regression.getIntercept();
 				double diff = Math.pow((y_pre - locationWrapper.getLocation().getY()), 2);
 				locationWrapper.setDiff(diff);
+
 			}
 
-			LocationWrapper max = Collections.max(clusterResults.get(i).getPoints(),
+			LocationWrapper min = Collections.min(clusterResults.get(i).getPoints(),
 					Comparator.comparingDouble(a -> a.diff));
-			System.out.println(max.diff);
 
+			// calculate distance to the most fit point
+			for (LocationWrapper locationWrapper : clusterResults.get(i).getPoints()) {
+
+				double euclidean_distance = calculateDistance(locationWrapper.getPoint(), min.getPoint());
+				locationWrapper.setEuclidean_distance(euclidean_distance);
+			}
 		}
+
 	}
 
 	public static class LocationWrapper implements Clusterable {
 		private double[] points;
 		private Location location;
 		private double diff;// difference between y and predicted y
-		double euclidean_distance;
+		private double euclidean_distance;
 
 		public LocationWrapper(Location location) {
 			this.location = location;
@@ -106,6 +100,22 @@ public class KMean {
 			this.diff = diff;
 		}
 
+		public double getEuclidean_distance() {
+			return euclidean_distance;
+		}
+
+		public void setEuclidean_distance(double euclidean_distance) {
+			this.euclidean_distance = euclidean_distance;
+		}
+
+	}
+
+	private static double calculateDistance(double[] vector1, double[] vector2) {
+		double sum = 0;
+		for (int i = 0; i < vector1.length; i++) {
+			sum += Math.pow((vector1[i] - vector2[i]), 2);
+		}
+		return Math.sqrt(sum);
 	}
 
 }
